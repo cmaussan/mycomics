@@ -10,13 +10,12 @@ __PACKAGE__->table( 'comic' );
 __PACKAGE__->add_columns(
     id     => { data_type => 'int', is_autoincrement => 1 },
     title  => { data_type => 'varchar' },
-    lang   => { data_type => 'varchar' },
-    editor => { data_type => 'varchar' },
 );
 
 __PACKAGE__->set_primary_key( 'id' );
+__PACKAGE__->has_many( comic_author => 'MyComics::DB::Result::ComicAuthor', 'comic_id' );
+__PACKAGE__->many_to_many( authors => 'comic_author', 'author_id' );
 
-__PACKAGE__->belongs_to( author => 'MyComics::DB::Result::Author', 'id' );
 
 1;
 

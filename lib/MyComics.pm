@@ -13,33 +13,94 @@ get '/' => sub {
     return { application => setting( 'appname' ) };
 };
 
+sub format_comic {
+    my $comic = shift;
+    
+    my $res = {
+        id    => $comic->id,
+        title => $comic->title, 
+    };
+    $res->{ authors } = [ map { $_->name } $comic->authors ];
+    
+    return $res;
+}
+
+post '/comic' => sub {
+    my $title   = param( 'title' );
+    my $authors = param( 'authors' );
+
+    my $db = db();
+
+    # Finding or creating authors
+    $authors = [ map { 
+        $db->resultset( 'Author' )->find_or_create( {
+            name => $_,
+        } ) 
+    } @$authors ];
+
+    # Creating comic
+    my $comic = $db->resultset( 'Comic' )->create( {
+        title => $title,
+    } );
+
+    # Attaching authors to comic
+    for ( @$authors ) {
+        $db->resultset( 'ComicAuthor' )->create( {
+            comic_id  => $comic->id,
+            author_id => $_->id,
+        } );
+    }
+
+    status 201;
+    return format_comic( $comic );
+};
+
 get '/comic/:id' => sub {
     my $id = param( 'id' );
 
-    db->resultset( 'Comic' )->find( $id );    
+    my $comic = db->resultset( 'Comic' )->find( 
+        { id => $id },
+        { prefetch => { comic_author => 'author_id' } },
+    );
 
-
+    return format_comic( $comic );
 };
 
-#post '/author' => sub {
-#    my 
+get '/search' => sub {
+    my $query = param( 'query' );
 
+    my @comics = db->resultset( 'Comic' )->search(
+        { title => { -like => '%' . $query . '%'} },
+        { prefetch => { comic_author => 'author_id' } },
+    );
 
+    return [ map { format_comic( $_ ) } @comics ];
 
-#}
-
-sub missing {
-    my $param = shift;
-    send_error( "missing: $param", 400 );
-}
+};
 
 get '/spore-desc' => sub {
     return {
         version => $VERSION,
         name    => setting( 'appname' ),
         methods => {
-
-        }
+            add_comic => {
+                method => 'POST',
+                path   => '/comic',
+                expected_status => [ 201 ],
+            },
+            get_comic => {
+                method => 'GET',
+                path   => '/comic/:id',
+                required_params => [ 'id' ],
+                expected_status => [ 200 ],
+            },
+            search => {
+                method => 'GET',
+                path   => '/search',
+                required_params => [ 'query' ],
+                expected_status => [ 200 ],
+            },
+        },
     };
 };
 

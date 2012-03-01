@@ -13,7 +13,9 @@ __PACKAGE__->add_columns(
 );
 
 __PACKAGE__->set_primary_key( 'id' );
-__PACKAGE__->has_many( comics => 'MyComics::DB::Result::Comic', 'id' );
+__PACKAGE__->has_many( comic_author => 'MyComics::DB::Result::ComicAuthor', 'author_id' );
+__PACKAGE__->many_to_many( comics => 'comic_author', 'comic_id' );
+
 
 1;
 

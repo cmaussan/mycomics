@@ -4,6 +4,7 @@ use 5.010;
 
 use Moose;
 use Net::HTTP::Spore;
+use Try::Tiny;
 use YAML;
 
 with 'MooseX::Getopt';
@@ -28,10 +29,53 @@ has '_spore' => (
 
 );
 
-sub add {
+sub add_comic {
     my $self = shift;
-    say Dump \@_;
+    my ( $title, @authors ) = @_;
 
+    my ( $res, $error );
+
+    try {
+        $res = $self->_spore->add_comic( payload => {
+            title   => $title,
+            authors => \@authors,
+        } )->body;
+    }
+    catch { $error = $_ };
+    die "ERROR: " . Dump( $error ) if( $error );
+
+    say Dump $res;
+
+}
+
+sub get_comic {
+    my $self = shift;
+    my ( $id ) = @_;
+
+    my ( $res, $error );
+
+    try {
+        $res = $self->_spore->get_comic( id => $id )->body;
+    }
+    catch { $error = $_ };
+    die "ERROR: " . Dump( $error ) if( $error );
+
+    say Dump $res;   
+}
+
+sub search {
+    my $self = shift;
+    my ( $query ) = @_;
+
+    my ( $res, $error );
+
+    try {
+        $res = $self->_spore->search( query => $query )->body;
+    }
+    catch { $error = $_ };
+    die "ERROR: " . Dump( $error ) if( $error );
+
+    say Dump $res;
 }
 
 
