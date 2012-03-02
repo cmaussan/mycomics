@@ -13,11 +13,11 @@ has 'base_url' => ( is => 'ro', isa => 'Str', required => 1, documentation => "S
 has 'spec'     => ( is => 'ro', isa => 'Str', required => 1, documentation => "SPORE spec location" );
 
 has '_spore' => (
-    is  => 'ro',
-    isa => 'Object',
+    is       => 'ro',
+    isa      => 'Object',
     required => 1,
-    lazy => 1,
-    default => sub {
+    lazy     => 1,
+    default  => sub {
         my $self   = shift;
         my $client = Net::HTTP::Spore->new_from_spec(
             $self->spec,

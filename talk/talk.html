@@ -9,26 +9,29 @@
 <section>
     <!-- This is the first slide -->
     <h1>My Comics</h1>
-    <p class="subtitle">Une appli web rapide avec du Perl moderne</p>
+    <p class="baseline">Une appli web rapide avec du Perl moderne</p>
     <footer>by Camille Maussang</footer>
 </section>
 
 <section>
-    <h2>My Comics</h2>
+    <h3>My Comics</h3>
+    <img src="">
 </section>
 
 <section>
     <h3>Une base de données ?</h3>
     <ul class="incremental">
-      <li><code>DBIx::Class</code>
-      <li>Extensible and flexible object <-> relational mapper.
-      <li>Extension de <code>DBI</code> donc indépendant de la base
+      <li><span class="normal"><code>DBIx::Class</code></span>
+      <li><span class="normal"><em>Extensible and flexible object <-> relational mapper</em></span>
+      <li><span class="normal">Extension de <code>DBI</code> donc indépendant de la base</span>
     </ul>
 </section>
 
 <section>
 
-    <p class="normal">lib/MyComics/DB.pm</p>
+    <h3 style="margin-top: 40px; margin-bottom: 20px;">Objets</h3>
+    <p class="subtitle">lib/MyComics/DB.pm</p>
+    <div class="code">
     <pre class='prettyprint'>
 package MyComics::DB;
 use base qw/DBIx::Class::Schema/;
@@ -36,7 +39,10 @@ use base qw/DBIx::Class::Schema/;
 __PACKAGE__->load_namespaces();
 
 1;</pre>
-    <p class="normal">lib/MyComics/DB/Result/Comic.pm</p>
+    </div>
+
+    <p class="subtitle">lib/MyComics/DB/Result/Comic.pm</p>
+    <div class="code">
     <pre class='prettyprint'>
 package MyComics::DB::Result::Comic;
 use base qw/DBIx::Class::Core/;
@@ -52,12 +58,344 @@ __PACKAGE__->has_many( comic_author => 'MyComics::DB::Result::ComicAuthor', 'com
 __PACKAGE__->many_to_many( authors => 'comic_author', 'author_id' );
 
 1;</pre>
-    <p class="normal">bin/deploy-mycomics.pl</p>
-    <pre class='prettyprint'>
-MyComics::DB->connect( $dsn, $user, $pass )->deploy;</pre>
+    </div>
 
 </section>
 
+<section>
+
+    <h3>Déploiement</h3>
+    <p class="subtitle">bin/deploy-mycomics.pl</p>
+    <div class="code">
+    <pre class='prettyprint'>
+use Getopt::Long;
+use MyComics::DB;
+
+my $options = GetOptions(
+    'dsn=s'  => \my $dsn,
+    'user=s' => \my $user,
+    'pass=s' => \my $pass,
+);
+
+die "--dsn undef!" unless $dsn;
+
+MyComics::DB->connect( $dsn, $user, $pass )->deploy;</pre>
+    </div>
+
+    <div class="code">
+    <pre class='prettyprint'>
+$ perl bin/deploy-mycomics.pl --dsn 'dbi:SQLite:dbname=tmp/comics.db'</pre>
+    </div>
+
+</section>
+
+<section>
+    <h3>Un <em>framework</em> web ?</h3>
+    <ul class="incremental">
+      <li><span class="normal"><code>Dancer</code></span>
+      <li><span class="normal"><em>Lightweight yet powerful web application framework</em></span>
+    </ul>
+</section>
+
+<section>
+
+    <h3 style="margin-top: 80px; ">Préalable</h3>
+    <p class="subtitle">config.yaml</p>
+    <div class="code">
+    <pre class='prettyprint'>
+serializer: JSON</pre>
+    </div>
+    <p class="subtitle">lib/MyComics.pm</p>
+    <div class="code">
+    <pre class='prettyprint'>
+get '/' => sub {
+    return { application => setting( 'appname' ) };
+};</pre>
+    </div>
+    <p class="subtitle"><code>curl -s -XGET 'http://localhost:3000/'</code></p>
+    <div class="code">
+    <pre class='prettyprint'>
+{
+   "application" : "MyComics"
+}</pre>
+    </div>
+    
+</section>
+
+<section>
+
+    <h3 style="margin-top: 40px; margin-bottom: 20px;">Routes</h3>
+    <p class="subtitle">lib/MyComics.pm</p>
+    <div class="code">
+    <pre class='prettyprint'>
+package MyComics;
+use Dancer ':syntax';
+use MyComics::DB;
+
+sub db { MyComics::DB->connect( @{ setting( 'db' ) } ) }
+
+sub format_comic {
+    my $comic = shift;
+
+    return {
+        id      => $comic->id,
+        title   => $comic->title, 
+        authors => [ map { $_->name } $comic->authors ],
+    };
+}
+
+get '/comic/:id' => sub {
+    my $id = param( 'id' );
+
+    my $comic = db->resultset( 'Comic' )->find( 
+        { id => $id },
+        { prefetch => { comic_author => 'author_id' } },
+    );
+
+    return format_comic( $comic );
+};</pre>
+    </div>
+
+</section>
+
+<section>
+
+    <h3 style="margin-top: 40px; margin-bottom: 20px;">Routes</h3>
+    <p class="subtitle">lib/MyComics.pm</p>
+    <div class="code">
+    <pre class='prettyprint'>
+post '/comic' => sub {
+    my $title   = param( 'title' );
+    my $authors = param( 'authors' );
+
+    my $db = db();
+
+    # Finding or creating authors
+    $authors = [ map { 
+        $db->resultset( 'Author' )->find_or_create( { name => $_ } ) 
+    } @$authors ];
+
+    # Creating comic
+    my $comic = $db->resultset( 'Comic' )->create( { title => $title } );
+
+    # Attaching authors to comic
+    for ( @$authors ) {
+        $db->resultset( 'ComicAuthor' )->create( {
+            comic_id  => $comic->id,
+            author_id => $_->id,
+        } );
+    }
+
+    status 201;
+    return format_comic( $comic );
+};</pre>
+    </div>
+
+</section>
+
+<section>
+    <h3>Un client d'API ?</h3>
+    <ul class="incremental">
+        <li><span class="normal"><code>Net::HTTP::Spore</code></span>
+        <li><span class="normal">SPORE : <em>SPecifications for a POrtable Rest Environment</em></span>
+        <li>Description d'API en JSON</li>
+        <li>Parsée et utilisée par le client pour communiquer avec l'API</li>
+    </ul>
+</section>
+
+<section>
+
+    <h3 style="margin-top: 80px; ">Description</h3>
+    <div class="code">
+    <pre class='prettyprint'>
+{
+   "name" : "mycomics"
+   "version" : "0.1",
+   "methods" : {
+      "search" : {
+         "expected_status" : [ 200 ],
+         "path" : "/search",
+         "method" : "GET",
+         "required_params" : [ "query" ]
+      },
+      "add_comic" : {
+         "expected_status" : [ 201 ],
+         "path" : "/comic",
+         "method" : "POST"
+      },
+      "get_comic" : {
+         "expected_status" : [ 200 ],
+         "path" : "/comic/:id",
+         "method" : "GET",
+         "required_params" : [ "id" ]
+      }
+   },
+}</pre>
+    </div>
+
+</section>
+
+<section>
+
+    <h3 style="margin-top: 80px; ">Utilisation</h3>
+    <div class="code">
+    <pre class='prettyprint'>
+use Net::HTTP::Spore;        
+use Try::Tiny;
+use YAML;
+
+my $client = Net::HTTP::Spore->new_from_spec(
+    'path/to/my/spec.json',
+    base_url => 'http://localhost:3000/',
+);
+$client->enable( 'Format::JSON' );
+
+my $query = 'Batman';
+
+my ( $res, $error );
+
+try { 
+    $res = $self->_spore->search( query => $query )->body;
+}
+catch { $error = $_ };
+die "ERROR: " . Dump( $error ) if( $error );
+
+say Dump $res;</pre>
+    </div>
+
+</section>
+
+<section>
+    <h3>Une appli CLI ?</h3>
+    <ul class="incremental">
+        <li><span class="normal"><code>MooseX::Getopt</code></span>
+        <li><span class="normal">Un mix entre <code>Getopt::Long</code> et <code>Moose</code></span>
+    </ul>
+</section>
+
+<section>
+    <h3 style="margin-top: 40px; margin-bottom: 20px;">Objet</h3>
+    <p class="subtitle">lib/MyComics/App.pm</p>
+    <div class="code" style="margin-left: 20px; margin-right: 20px; ">
+    <pre class='prettyprint'>
+package MyComics::App;
+use Moose;
+use Net::HTTP::Spore;
+use Try::Tiny;
+use YAML;
+
+with 'MooseX::Getopt';
+
+has 'base_url' => ( is => 'ro', isa => 'Str', required => 1, documentation => "SPORE API base url" );
+has 'spec'     => ( is => 'ro', isa => 'Str', required => 1, documentation => "SPORE spec location" );
+
+has '_spore' => (
+    is       => 'ro',
+    isa      => 'Object',
+    required => 1,
+    lazy     => 1,
+    default  => sub {
+        my $self   = shift;
+        my $client = Net::HTTP::Spore->new_from_spec(
+            $self->spec,
+            base_url => $self->{ base_url },
+        );
+        $client->enable( 'Format::JSON' );
+        $client;
+    }
+);</pre>
+    </div>
+
+</section>
+
+
+<section>
+
+    <h3 style="margin-top: 40px; margin-bottom: 20px;">Objet</h3>
+    <p class="subtitle">lib/MyComics/App.pm</p>
+    <div class="code">
+    <pre class='prettyprint'>
+sub add_comic {
+    my ( $self, $title, @authors ) = @_;
+    my ( $res, $error );
+
+    try {
+        $res = $self->_spore->add_comic( payload => {
+            title   => $title,
+            authors => \@authors,
+        } )->body;
+    }
+    catch { $error = $_ };
+    die "ERROR: " . Dump( $error ) if( $error );
+    say Dump $res;
+}
+
+sub search {
+    my ( $self, $query ) = @_;
+    my ( $res, $error );
+
+    try {
+        $res = $self->_spore->search( query => $query )->body;
+    }
+    catch { $error = $_ };
+    die "ERROR: " . Dump( $error ) if( $error );
+    say Dump $res;
+}</pre>
+    </div>
+
+</section>
+<section>
+
+    <h3 style="margin-top: 40px; margin-bottom: 20px;">Script</h3>
+    <p class="subtitle">bin/mycomics.pl</p>
+    <div class="code">
+    <pre class='prettyprint'>
+use MyComics::App;
+use YAML;
+
+my $app  = MyComics::App->new_with_options();
+my @args = @{ $app->extra_argv };
+my $verb = shift @args;
+die( "ERROR: '$verb' is not a valid action\n" ) 
+    unless( $app->meta->find_method_by_name( $verb ) );
+
+$app->$verb( @args );</pre>
+    </div>
+    <div class="code">
+    <pre class='prettyprint'>
+$ perl bin/mycomics.pl --base_url 'http://localhost:3000/' --spec 'http://localhost:3000/spore-desc' search Batman
+---
+- authors:
+    - Franck Miller
+    - David Mazzucchelli
+  id: 2
+  title: 'Batman: Year One'
+- authors:
+    - Franck Miller
+  id: 3
+  title: Batman Dark Knight</pre>
+    </div>
+
+</section>
+
+<section>
+    <h2>Questions ?</h2>    
+</section>
+
+<section>
+    <h3>Thanks !</h3>
+    <ul>
+        <li>Modules : <a href="https://metacpan.org/">https://metacpan.org/</a></li>
+        <li>Dancer : <a href="http://perldancer.org/">http://perldancer.org/</a></li>
+        <li>SPORE : <a href="https://github.com/SPORE">https://github.com/SPORE</a></li>
+        <li>DZSlides : <a href="http://paulrouget.com/dzslides/">http://paulrouget.com/dzslides/</a></li>
+    </ul>
+    <p style="font-weight: bold; text-align: center;">
+        Talk &amp; Démo<br/><a href="https://github.com/cmaussan/mycomics">https://github.com/cmaussan/mycomics</a>
+    </p>
+</section>
+
+<!-- 
 <section>
   <q>
     Soothe us with sweet lies. Is that a cooking show? No! I want to
@@ -81,6 +419,7 @@ MyComics::DB->connect( $dsn, $user, $pass )->deploy;</pre>
 <section>
     <h2>End!</h2>
 </section>
+-->
 
 <!-- Your Style -->
 <!-- Define the style of your presentation -->
@@ -99,30 +438,49 @@ MyComics::DB->connect( $dsn, $user, $pass )->deploy;</pre>
   section {
       /* The font from Google */
       font-family: 'Droid Sans', arial, serif;
-      font-size: 40px;
+      font-size: 30px;
       color: whitesmoke;
   }
+
   code {
      font-family: 'Inconsolata';
      color: lightgrey;
   }
+
   h1, h2 {
     margin-top: 200px;
     text-align: center;
     font-size: 80px;
   }
+
   h3 {
-    margin: 100px 0 50px 100px;
+    margin: 100px 0 30px 100px;
+  }
+
+  p.baseline {
+    text-align: center;
+    color: grey;
+    font-size: 30px;
+  }
+
+  p.subtitle {
+    font-size: 18px;
+    font-weight: bold;
+    margin: 0 80px;
   }
 
   ul {
       margin: 50px 100px;
   }
 
+  div.code {
+    margin: 0 70px;
+  }
+
   pre {
     font-family: 'Inconsolata';
     font-size: 14px;
-    margin: 10px;
+    /*margin: 10px 50px;*/
   }
 
   q {
@@ -152,15 +510,13 @@ MyComics::DB->connect( $dsn, $user, $pass )->deploy;</pre>
     color: grey;    
   }
 
-  p.subtitle {
-    text-align: center;
-    color: grey;
-    font-size: 30px;
+  .normal {
+      color: whitesmoke;
   }
 
-  p.normal {
-    font-size: 14px;
-    margin: 10px 10px 0 10px;
+  a {
+    color: #89bdff;
+    text-decoration: none;
   }
 
   /* Transition effect */

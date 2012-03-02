@@ -1,13 +1,11 @@
-package mycomicsdb;
+package MyComics;
 use Dancer ':syntax';
 
 use MyComics::DB;
 
 our $VERSION = '0.1';
 
-sub db {
-    return MyComics::DB->connect( @{ setting( 'db' ) } );
-}
+sub db { MyComics::DB->connect( @{ setting( 'db' ) } ) }
 
 get '/' => sub {
     return { application => setting( 'appname' ) };
@@ -15,14 +13,12 @@ get '/' => sub {
 
 sub format_comic {
     my $comic = shift;
-    
-    my $res = {
-        id    => $comic->id,
-        title => $comic->title, 
-    };
-    $res->{ authors } = [ map { $_->name } $comic->authors ];
-    
-    return $res;
+
+    return {
+        id      => $comic->id,
+        title   => $comic->title, 
+        authors => [ map { $_->name } $comic->authors ]
+    }
 }
 
 post '/comic' => sub {
