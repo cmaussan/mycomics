@@ -15,7 +15,7 @@
 </section>
 
 <section>
-    <h3>My Comics</h3>
+    <h3>My Comics ?</h3>
     <img src="">
 </section>
 
@@ -113,7 +113,7 @@ get '/' => sub {
     return { application => setting( 'appname' ) };
 };</pre>
     </div>
-    <p class="subtitle"><code>curl -s -XGET 'http://localhost:3000/'</code></p>
+    <p class="subtitle"><code style="font-size: 20px; ">curl -s -XGET 'http://localhost:3000/'</code></p>
     <div class="code">
     <pre class='prettyprint'>
 {
@@ -161,7 +161,7 @@ get '/comic/:id' => sub {
 
 <section>
 
-    <h3 style="margin-top: 40px; margin-bottom: 20px;">Routes</h3>
+    <h3 style="margin-top: 40px; margin-bottom: 20px;"><em>On the road again...</em></h3>
     <p class="subtitle">lib/MyComics.pm</p>
     <div class="code">
     <pre class='prettyprint'>
@@ -198,7 +198,7 @@ post '/comic' => sub {
     <h3>Un client d'API ?</h3>
     <ul class="incremental">
         <li><span class="normal"><code>Net::HTTP::Spore</code></span>
-        <li><span class="normal">SPORE : <em>SPecifications for a POrtable Rest Environment</em></span>
+        <li><span class="normal">SPORE : <em>Specifications for a POrtable Rest Environment</em></span>
         <li><span class="normal">Description d'API en JSON</span></li>
         <li><span class="normal">Parsée et utilisée par le client pour communiquer avec l'API</span></li>
     </ul>
@@ -230,7 +230,7 @@ post '/comic' => sub {
          "method" : "GET",
          "required_params" : [ "id" ]
       }
-   },
+   }
 }</pre>
     </div>
 
@@ -384,7 +384,7 @@ $ perl bin/mycomics.pl --base_url 'http://localhost:3000/' --spec 'http://localh
 </section>
 
 <section>
-    <h3 style="margin-top: 80px; ">Thanks !</h3>
+    <h3 style="margin-top: 80px; ">Merci !</h3>
     <ul>
         <li>Modules : <a href="https://metacpan.org/">https://metacpan.org/</a></li>
         <li>Dancer : <a href="http://perldancer.org/">http://perldancer.org/</a></li>
@@ -409,6 +409,10 @@ $ perl bin/mycomics.pl --base_url 'http://localhost:3000/' --spec 'http://localh
     <script>document.addEventListener('DOMContentLoaded', function () { prettyPrint() }, false);</script>
 
 <style>
+  @font-face { font-family: 'Droid Sans'; src: url('DroidSans.ttf'); }
+  @font-face { font-family: 'Droid Sans'; font-weight: bold; src: url('DroidSans-Bold.ttf'); }
+  @font-face { font-family: 'Inconsolata'; src: url('Inconsolata.otf'); }
+
   html { background-color: white; }
   body { background-color: black; }
 
@@ -450,7 +454,7 @@ $ perl bin/mycomics.pl --base_url 'http://localhost:3000/' --spec 'http://localh
   }
 
   ul {
-      margin: 50px 100px;
+      margin: 80px 100px;
   }
 
   div.code {
