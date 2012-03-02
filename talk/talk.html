@@ -199,8 +199,8 @@ post '/comic' => sub {
     <ul class="incremental">
         <li><span class="normal"><code>Net::HTTP::Spore</code></span>
         <li><span class="normal">SPORE : <em>SPecifications for a POrtable Rest Environment</em></span>
-        <li>Description d'API en JSON</li>
-        <li>Parsée et utilisée par le client pour communiquer avec l'API</li>
+        <li><span class="normal">Description d'API en JSON</span></li>
+        <li><span class="normal">Parsée et utilisée par le client pour communiquer avec l'API</span></li>
     </ul>
 </section>
 
@@ -398,32 +398,6 @@ $ perl bin/mycomics.pl --base_url 'http://localhost:3000/' --spec 'http://localh
 
 </section>
 
-<!-- 
-<section>
-  <q>
-    Soothe us with sweet lies. Is that a cooking show? No! I want to
-    live! There are still too many things I don't own!
-  </q>
-</section>
-
-<section>
-    <h2>Part two</h2>
-</section>
-
-<section>
-    <h3>An image</h3>
-    <img src="http://placekitten.com/g/800/600">
-</section>
-
-<section>
-    <h3>A video</h3>
-</section>
-
-<section>
-    <h2>End!</h2>
-</section>
--->
-
 <!-- Your Style -->
 <!-- Define the style of your presentation -->
 
@@ -439,15 +413,17 @@ $ perl bin/mycomics.pl --base_url 'http://localhost:3000/' --spec 'http://localh
   body { background-color: black; }
 
   /* A section is a slide. It's size is 800x600, and this will never change */
+
   section {
       /* The font from Google */
       font-family: 'Droid Sans', arial, serif;
-      font-size: 30px;
+      font-size: 28px;
       color: whitesmoke;
   }
 
   code {
      font-family: 'Inconsolata';
+     font-size: 30px;
      color: lightgrey;
   }
 
@@ -458,7 +434,7 @@ $ perl bin/mycomics.pl --base_url 'http://localhost:3000/' --spec 'http://localh
   }
 
   h3 {
-    margin: 100px 0 30px 100px;
+    margin: 100px 0 30px 80px;
   }
 
   p.baseline {
@@ -551,7 +527,7 @@ $ perl bin/mycomics.pl --base_url 'http://localhost:3000/' --spec 'http://localh
   .incremental > * { opacity: 1; }
 
   /* The current item */
-  .incremental > *[aria-selected] { color: red; opacity: 1; }
+  .incremental > *[aria-selected] { color: #ffcc00; opacity: 1; }
 
   /* The items to-be-selected */
   .incremental > *[aria-selected] ~ * { opacity: 0.2; }
