@@ -410,7 +410,7 @@ $ perl bin/mycomics.pl --base_url 'http://localhost:3000/' --spec 'http://localh
 
 <style>
   @font-face { font-family: 'Droid Sans'; src: url('DroidSans.ttf'); }
-  @font-face { font-family: 'Droid Sans Bold'; src: url('DroidSansBold.ttf'); font-weight: bold; }
+  /*@font-face { font-family: 'Droid Sans'; font-weight: bold; src: url('DroidSans-Bold.ttf'); }*/
   @font-face { font-family: 'Inconsolata'; src: url('Inconsolata.otf'); }
 
   html { background-color: white; }
@@ -434,13 +434,11 @@ $ perl bin/mycomics.pl --base_url 'http://localhost:3000/' --spec 'http://localh
   h1, h2 {
     margin-top: 200px;
     text-align: center;
-    font-family: 'Droid Sans Bold';
     font-size: 80px;
   }
 
   h3 {
     margin: 100px 0 30px 80px;
-    font-family: 'Droid Sans Bold';
   }
 
   p.baseline {
@@ -451,7 +449,7 @@ $ perl bin/mycomics.pl --base_url 'http://localhost:3000/' --spec 'http://localh
 
   p.subtitle {
     font-size: 18px;
-    font-family: 'Droid Sans Bold';
+    font-weight: bold;
     margin: 0 80px;
   }
 
@@ -495,7 +493,7 @@ $ perl bin/mycomics.pl --base_url 'http://localhost:3000/' --spec 'http://localh
     bottom: 10px;
     right: 20px;
     font-size: 25px;
-    font-family: 'Droid Sans Bold';
+    font-weight: bold;
     color: whitesmoke;    
   }
 
