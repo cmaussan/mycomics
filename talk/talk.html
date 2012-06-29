@@ -30,8 +30,7 @@
 
 <section>
 
-    <h3 style="margin-top: 40px; margin-bottom: 20px;">Objets</h3>
-    <p class="subtitle">lib/MyComics/DB.pm</p>
+    <h3>lib/MyComics/DB.pm</h3>
     <div class="code">
     <pre class='prettyprint'>
 package MyComics::DB;
@@ -41,10 +40,12 @@ __PACKAGE__->load_namespaces();
 
 1;</pre>
     </div>
+</section>
 
-    <p class="subtitle">lib/MyComics/DB/Result/Comic.pm</p>
+<section>
+    <h3>lib/MyComics/DB/Result/Comic.pm</h3>
     <div class="code">
-    <pre class='prettyprint'>
+    <pre class="prettyprint">
 package MyComics::DB::Result::Comic;
 use base qw/DBIx::Class::Core/;
 
@@ -66,7 +67,6 @@ __PACKAGE__->many_to_many( authors => 'comic_author', 'author_id' );
 <section>
 
     <h3>Déploiement</h3>
-    <p class="subtitle">bin/deploy-mycomics.pl</p>
     <div class="code">
     <pre class='prettyprint'>
 use Getopt::Long;
@@ -87,35 +87,50 @@ MyComics::DB->connect( $dsn, $user, $pass )->deploy;</pre>
     <pre class='prettyprint'>
 $ perl bin/deploy-mycomics.pl --dsn 'dbi:SQLite:dbname=tmp/comics.db'</pre>
     </div>
-
 </section>
 
 <section>
     <h3>Un <em>framework</em> web ?</h3>
     <ul class="incremental">
       <li><span class="normal"><code>Dancer</code></span>
-      <li><span class="normal"><em>Lightweight yet powerful web application framework</em></span>
+      <li><span class="normal"><em>Succint, Clean, Lightweight, MVC-ish</em></span>
+      <li><span class="normal">Compatible PSGI/Plack</span>
+      <li><span class="normal">Peu de dépendances</span>
+      <li><span class="normal">Chaque appli est aussi un serveur</span>
     </ul>
 </section>
 
 <section>
+    <h3>Dancer</h3>
+    <div class="code">
+    <pre class="prettyprint">
+use Dancer;
 
-    <h3 style="margin-top: 80px; ">Préalable</h3>
-    <p class="subtitle">config.yaml</p>
+get "/" => sub {
+    "Hello, World!"
+};
+
+dance;
+</pre>
+    </div>
+</section>
+
+<section>
+
+    <h3><em>XML is dead!</em></h3>
     <div class="code">
     <pre class='prettyprint'>
 serializer: JSON</pre>
     </div>
-    <p class="subtitle">lib/MyComics.pm</p>
     <div class="code">
     <pre class='prettyprint'>
 get '/' => sub {
-    return { application => setting( 'appname' ) };
+    { application => setting( 'appname' ) }
 };</pre>
     </div>
-    <p class="subtitle"><code style="font-size: 20px; ">curl -s -XGET 'http://localhost:3000/'</code></p>
     <div class="code">
     <pre class='prettyprint'>
+$ curl -s -XGET 'http://localhost:3000/'
 {
    "application" : "MyComics"
 }</pre>
@@ -124,27 +139,9 @@ get '/' => sub {
 </section>
 
 <section>
-
-    <h3 style="margin-top: 40px; margin-bottom: 20px;">Routes</h3>
-    <p class="subtitle">lib/MyComics.pm</p>
+    <h3>Et hop ! Une route</h3>
     <div class="code">
-    <pre class='prettyprint'>
-package MyComics;
-use Dancer ':syntax';
-use MyComics::DB;
-
-sub db { MyComics::DB->connect( @{ setting( 'db' ) } ) }
-
-sub format_comic {
-    my $comic = shift;
-
-    return {
-        id      => $comic->id,
-        title   => $comic->title, 
-        authors => [ map { $_->name } $comic->authors ],
-    };
-}
-
+    <pre class="prettyprint">
 get '/comic/:id' => sub {
     my $id = param( 'id' );
 
@@ -156,39 +153,51 @@ get '/comic/:id' => sub {
     return format_comic( $comic );
 };</pre>
     </div>
-
 </section>
 
 <section>
 
-    <h3 style="margin-top: 40px; margin-bottom: 20px;"><em>On the road again...</em></h3>
-    <p class="subtitle">lib/MyComics.pm</p>
+    <h3>Helpers</h3>
     <div class="code">
     <pre class='prettyprint'>
+sub db { MyComics::DB->connect( @{ setting( 'db' ) } ) }
+
+sub format_comic {
+    my $comic = shift;
+
+    return {
+        id      => $comic->id,
+        title   => $comic->title, 
+        authors => [ map { $_->name } $comic->authors ],
+    };
+}</pre>
+    </div>
+</section>
+
+<section>
+    <h3 style="margin-top: 15px; margin-bottom: 10px;"><em>On the road again...</em></h3>
+    <div class="code">
+    <pre class="prettyprint" style="font-size: 19px;">
 post '/comic' => sub {
-    my $title   = param( 'title' );
-    my $authors = param( 'authors' );
+  my $title   = param('title');
+  my $authors = param('authors');
+  my $db = db();
 
-    my $db = db();
+  $authors = [ map { 
+      $db->resultset('Author')->find_or_create( { name => $_ } ) 
+  } @$authors ];
 
-    # Finding or creating authors
-    $authors = [ map { 
-        $db->resultset( 'Author' )->find_or_create( { name => $_ } ) 
-    } @$authors ];
+  my $comic = $db->resultset('Comic')->create( { title => $title } );
 
-    # Creating comic
-    my $comic = $db->resultset( 'Comic' )->create( { title => $title } );
+  for ( @$authors ) {
+      $db->resultset( 'ComicAuthor' )->create( {
+          comic_id  => $comic->id,
+          author_id => $_->id,
+      } );
+  }
 
-    # Attaching authors to comic
-    for ( @$authors ) {
-        $db->resultset( 'ComicAuthor' )->create( {
-            comic_id  => $comic->id,
-            author_id => $_->id,
-        } );
-    }
-
-    status 201;
-    return format_comic( $comic );
+  status 201;
+  return format_comic( $comic );
 };</pre>
     </div>
 
@@ -205,10 +214,8 @@ post '/comic' => sub {
 </section>
 
 <section>
-
-    <h3 style="margin-top: 80px; ">Description</h3>
     <div class="code">
-    <pre class='prettyprint'>
+    <pre class="prettyprint" style="font-size: 19px; ">
 {
    "name" : "mycomics"
    "version" : "0.1",
@@ -237,9 +244,7 @@ post '/comic' => sub {
 </section>
 
 <section>
-
-    <h3 style="margin-top: 80px; ">Utilisation</h3>
-    <div class="code">
+    <div class="code" style="margin-top: 40px; ">
     <pre class='prettyprint'>
 use Net::HTTP::Spore;        
 use Try::Tiny;
@@ -254,7 +259,6 @@ $client->enable( 'Format::JSON' );
 my $query = 'Batman';
 
 my ( $res, $error );
-
 try { 
     $res = $self->_spore->search( query => $query )->body;
 }
@@ -275,23 +279,36 @@ say Dump $res;</pre>
 </section>
 
 <section>
-    <h3 style="margin-top: 40px; margin-bottom: 20px;">Objet</h3>
-    <p class="subtitle">lib/MyComics/App.pm</p>
-    <div class="code" style="margin-left: 20px; margin-right: 20px; ">
-    <pre class='prettyprint'>
+    <h3 style="margin-top: 40px; ">Attributs visibles...</h3>
+    <div class="code">
+    <pre class="prettyprint">
 package MyComics::App;
 use Moose;
 use Net::HTTP::Spore;
-use Try::Tiny;
-use YAML;
 
 with 'MooseX::Getopt';
 
-has 'base_url' => ( is => 'ro', isa => 'Str', required => 1, documentation => "SPORE API base url" );
-has 'spec'     => ( is => 'ro', isa => 'Str', required => 1, documentation => "SPORE spec location" );
+has 'base_url' => ( 
+    is            => 'ro', 
+    isa           => 'Str', 
+    required      => 1, 
+    documentation => "SPORE API base url" 
+);
+has 'spec'     => ( 
+    is            => 'ro', 
+    isa           => 'Str', 
+    required      => 1, 
+    documentation => "SPORE spec location" 
+);</pre>
+    </div>
+</section>
 
+<section>
+    <h3>... et invisibles</h3>
+    <div class="code">
+    <pre class="prettyprint">
 has '_spore' => (
-    is       => 'ro',
+    is       => 'ro', 
     isa      => 'Object',
     required => 1,
     lazy     => 1,
@@ -299,38 +316,20 @@ has '_spore' => (
         my $self   = shift;
         my $client = Net::HTTP::Spore->new_from_spec(
             $self->spec,
-            base_url => $self->{ base_url },
+            base_url => $self->base_url,
         );
         $client->enable( 'Format::JSON' );
         $client;
     }
 );</pre>
     </div>
-
 </section>
 
 
 <section>
-
-    <h3 style="margin-top: 40px; margin-bottom: 20px;">Objet</h3>
-    <p class="subtitle">lib/MyComics/App.pm</p>
+    <h3 style="margin-top: 40px; margin-bottom: 20px;">Méthodes</h3>
     <div class="code">
     <pre class='prettyprint'>
-sub add_comic {
-    my ( $self, $title, @authors ) = @_;
-    my ( $res, $error );
-
-    try {
-        $res = $self->_spore->add_comic( payload => {
-            title   => $title,
-            authors => \@authors,
-        } )->body;
-    }
-    catch { $error = $_ };
-    die "ERROR: " . Dump( $error ) if( $error );
-    say Dump $res;
-}
-
 sub search {
     my ( $self, $query ) = @_;
     my ( $res, $error );
@@ -346,13 +345,10 @@ sub search {
 
 </section>
 <section>
-
-    <h3 style="margin-top: 40px; margin-bottom: 20px;">Script</h3>
-    <p class="subtitle">bin/mycomics.pl</p>
+    <h3>Et le script !</h3>
     <div class="code">
     <pre class='prettyprint'>
 use MyComics::App;
-use YAML;
 
 my $app  = MyComics::App->new_with_options();
 my @args = @{ $app->extra_argv };
@@ -362,6 +358,9 @@ die( "ERROR: '$verb' is not a valid action\n" )
 
 $app->$verb( @args );</pre>
     </div>
+</section>
+<section>
+    <h3>My Comics</h3>
     <div class="code">
     <pre class='prettyprint'>
 $ perl bin/mycomics.pl --base_url 'http://localhost:3000/' --spec 'http://localhost:3000/spore-desc' search Batman
@@ -384,7 +383,7 @@ $ perl bin/mycomics.pl --base_url 'http://localhost:3000/' --spec 'http://localh
 </section>
 
 <section>
-    <h3 style="margin-top: 80px; ">Merci !</h3>
+    <h3>Merci !</h3>
     <ul>
         <li>Modules : <a href="https://metacpan.org/">https://metacpan.org/</a></li>
         <li>Dancer : <a href="http://perldancer.org/">http://perldancer.org/</a></li>
@@ -403,10 +402,10 @@ $ perl bin/mycomics.pl --base_url 'http://localhost:3000/' --spec 'http://localh
 
 <!-- Maybe a font from http://www.google.com/webfonts ? -->
 <!-- <link href='http://fonts.googleapis.com/css?family=Oswald' rel='stylesheet'> -->
-    <link href="google-code-prettify/prettify.css" rel="stylesheet" type="text/css">
-    <link href="google-code-prettify/style/sunburst.css" rel="stylesheet" type="text/css">
-    <script src="google-code-prettify/prettify.js"></script>
-    <script>document.addEventListener('DOMContentLoaded', function () { prettyPrint() }, false);</script>
+<link href="google-code-prettify/prettify.css" rel="stylesheet" type="text/css">
+<link href="google-code-prettify/style/sunburst.css" rel="stylesheet" type="text/css">
+<script src="google-code-prettify/prettify.js"></script>
+<script>document.addEventListener('DOMContentLoaded', function () { prettyPrint() }, false);</script>
 
 <style>
 @font-face {
@@ -436,9 +435,9 @@ $ perl bin/mycomics.pl --base_url 'http://localhost:3000/' --spec 'http://localh
   }
 
   code {
-     font-family: 'Inconsolata';
-     font-size: 30px;
-     color: lightgrey;
+    font-family: "Inconsolata";
+    font-size: 35px;
+    color: lightgrey;
   }
 
   h1, h2 {
@@ -448,7 +447,7 @@ $ perl bin/mycomics.pl --base_url 'http://localhost:3000/' --spec 'http://localh
   }
 
   h3 {
-    margin: 100px 0 30px 80px;
+    margin: 70px 0 30px 80px;
   }
 
   p.baseline {
@@ -468,12 +467,12 @@ $ perl bin/mycomics.pl --base_url 'http://localhost:3000/' --spec 'http://localh
   }
 
   div.code {
-    margin: 0 70px;
+    margin: 0 30px;
   }
 
   pre {
     font-family: 'Inconsolata';
-    font-size: 14px;
+    font-size: 20px;
     /*margin: 10px 50px;*/
   }
 
